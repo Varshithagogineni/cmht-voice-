@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - DEFAULT_VOICE_ID=${DEFAULT_VOICE_ID}
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cmht-network
+
+  kiosk-ui:
+    build:
+      context: ./kiosk-ui
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_BASE=http://localhost:8000
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cmht-network
+
+networks:
+  cmht-network:
+    driver: bridge
+
+volumes:
+  # Add any persistent volumes here if needed
+  # cmht-data: 
